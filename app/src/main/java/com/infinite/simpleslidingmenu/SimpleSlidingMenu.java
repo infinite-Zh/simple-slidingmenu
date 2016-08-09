@@ -21,7 +21,6 @@ public class SimpleSlidingMenu extends ViewGroup{
 
     private int mMenuWidth;
     private int mContentWidth;
-    private int mScrolledDistance;
     public SimpleSlidingMenu(Context context) {
         this(context,null);
     }
@@ -80,13 +79,27 @@ public class SimpleSlidingMenu extends ViewGroup{
             case MotionEvent.ACTION_MOVE:
                 mCurrentX= (int) event.getX();
                 mCurrentY= (int) event.getY();
-                Log.e(TAG,"action move:"+mCurrentX);
-                mScrolledDistance=mCurrentX-mLastX;
-                scrollBy(-mScrolledDistance,0);
-                mLastX=mCurrentX;
-                mLastY=mCurrentY;
+                Log.e(TAG,getScrollX()+"");
+                int dx=mCurrentX-mLastX;
+                //向右滑动，打开菜单
+                if (dx>0){
+                    if (getScrollX() - dx <= -mMenuWidth){
+                        scrollTo(-mMenuWidth,0);
+                    }else {
+                        scrollBy(-dx,0);
+                    }
+
+                }else {//手指向左滑动，关闭菜单
+                    if (getScrollX()+Math.abs(dx)>=0){
+                        scrollTo(0,0);
+                    }else {
+                        scrollBy(-dx,0);
+                    }
+                }
                 break;
             case MotionEvent.ACTION_UP:
+                mLastX=mCurrentX;
+                mLastY=mCurrentY;
                 break;
         }
         return true;
