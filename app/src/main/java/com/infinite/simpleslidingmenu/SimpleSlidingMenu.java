@@ -3,11 +3,11 @@ package com.infinite.simpleslidingmenu;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Scroller;
 
 /**
  * Created by inf on 2016/8/9.
@@ -15,6 +15,7 @@ import android.view.WindowManager;
 public class SimpleSlidingMenu extends ViewGroup{
 
     private static final String TAG="SimpleSlidingMenu";
+    private Scroller mScroller;
     private int mScreenWidth,mScreenHeight;
     private int mMarginToEdge;
     private ViewGroup mMenu,mContent;
@@ -31,6 +32,7 @@ public class SimpleSlidingMenu extends ViewGroup{
 
     public SimpleSlidingMenu(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        mScroller=new Scroller(context);
         WindowManager wm= (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
         DisplayMetrics dm=new DisplayMetrics();
         wm.getDefaultDisplay().getMetrics(dm);
@@ -74,39 +76,81 @@ public class SimpleSlidingMenu extends ViewGroup{
             case MotionEvent.ACTION_DOWN:
                 mLastX= (int) event.getX();
                 mLastY= (int) event.getY();
-                Log.e(TAG,"action down:"+mLastX);
                 break;
             case MotionEvent.ACTION_MOVE:
                 mCurrentX= (int) event.getX();
                 mCurrentY= (int) event.getY();
-                Log.e(TAG,getScrollX()+"");
                 int dx=mCurrentX-mLastX;
+
                 //向右滑动，打开菜单
                 if (dx>0){
-                    if (getScrollX() - dx <= -mMenuWidth){
+                    //移动的距离达到菜单宽度的时候，不能再滑动
+                    if (getScrollX() <=-mMenuWidth){
                         scrollTo(-mMenuWidth,0);
                     }else {
                         scrollBy(-dx,0);
                     }
 
                 }else {//手指向左滑动，关闭菜单
-                    if (getScrollX()+Math.abs(dx)>=0){
+                    //回到初始位置，不再滑动
+                    if (getScrollX()>=0){
                         scrollTo(0,0);
                     }else {
                         scrollBy(-dx,0);
                     }
                 }
-                break;
-            case MotionEvent.ACTION_UP:
+                mMenu.setTranslationX((getScrollX()+mMenuWidth)*2/3);
                 mLastX=mCurrentX;
                 mLastY=mCurrentY;
+                break;
+            case MotionEvent.ACTION_UP:
+                //打开菜单
+                if (Math.abs((float) getScrollX()/mMenuWidth)>=0.5){
+                    mScroller.startScroll(getScrollX(),0,-mMenuWidth-getScrollX(),0);
+                }else{//关闭
+                    mScroller.startScroll(getScrollX(),0,-getScrollX(),0);
+                }
+                invalidate();
                 break;
         }
         return true;
     }
 
+    int x= 0;
+    int y= 0;
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        return true;
+        boolean intercept=false;
+        switch (ev.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                intercept=false;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                int dx= (int) (ev.getX()-x);
+                int dy= (int) (ev.getY()-y);
+                if (Math.abs(dx)>Math.abs(dy)){
+                    intercept=true;
+                }else{
+                    intercept=false;
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+                intercept=false;
+                break;
+        }
+        mLastX= (int) ev.getX();
+        mLastY= (int) ev.getY();
+        x= (int) ev.getX();
+        y= (int) ev.getY();
+        return intercept;
+    }
+
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()){
+            scrollTo(mScroller.getCurrX(),mScroller.getCurrY());
+            mMenu.setTranslationX((getScrollX()+mMenuWidth)*2/3);
+            invalidate();
+        }
     }
 }
